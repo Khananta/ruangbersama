@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base Styles ── */
+@layer base {
+  html {
+    font-family: var(--font-sans), 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+  body {
+    background-color: #FAFAFA;
+    color: #1C1917;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  * {
+    box-sizing: border-box;
+  }
+}
+
+/* ── Utility Classes ── */
+@layer utilities {
+  .border-3 {
+    border-width: 3px;
+  }
+  .font-sans {
+    font-family: var(--font-sans), 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+}
+
+/* ── Bento Card ── */
+.bento-card {
+  background: #FFFFFF;
+  border: 1px solid #F3F4F6;
+  border-radius: 1.5rem;
+  box-shadow: 0 2px 14px -3px rgba(14, 165, 233, 0.05), 0 1px 4px -1px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease-in-out;
+}
+.bento-card:hover {
+  border-color: #BAE6FD;
+  box-shadow: 0 10px 25px -4px rgba(14, 165, 233, 0.12);
+}
+
+/* ── Solid Sky Blue Brand Utilities (No Gradient) ── */
+.brand-text,
+.gradient-pink-text,
+.gradient-green-text {
+  color: #0284C7;
+  background: none;
+  -webkit-text-fill-color: #0284C7;
+  background-clip: unset;
+}
+
+.brand-bg,
+.gradient-pink-bg,
+.gradient-green-bg {
+  background-color: #0284C7;
+  background-image: none;
+}
+
+.brand-soft-bg,
+.gradient-rose-soft {
+  background-color: #F0F9FF;
+  background-image: none;
+}
+
+/* ── Modal Backdrop ── */
+.modal-backdrop {
+  background: rgba(28, 25, 23, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+/* ── Custom Scrollbars ── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #BAE6FD;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #0EA5E9;
+}
+
+/* ── Animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+@keyframes spinSlow {
+  to { transform: rotate(360deg); }
+}
