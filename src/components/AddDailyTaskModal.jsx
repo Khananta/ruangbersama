@@ -3,19 +3,37 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Clock, Calendar, CheckSquare } from 'lucide-react';
 
-export const AddDailyTaskModal = ({ isOpen, onClose, onAddTask, onEditTask, initialData = null, initialDate }) => {
+// Helper: Format Date object to local YYYY-MM-DD string
+const toLocalDateString = (d = new Date()) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export const AddDailyTaskModal = ({
+  isOpen,
+  onClose,
+  onAddTask,
+  onEditTask,
+  initialData = null,
+  initialDate,
+  existingTasks = [],
+}) => {
   const [title, setTitle] = useState(initialData?.title || '');
-  const [date, setDate] = useState(initialData?.date || initialDate || new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(initialData?.date || initialDate || toLocalDateString());
   const [time, setTime] = useState(initialData?.time || '');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
+    setErrorMessage('');
     if (initialData) {
       setTitle(initialData.title || '');
-      setDate(initialData.date || initialDate || new Date().toISOString().split('T')[0]);
+      setDate(initialData.date || initialDate || toLocalDateString());
       setTime(initialData.time || '');
     } else {
       setTitle('');
-      setDate(initialDate || new Date().toISOString().split('T')[0]);
+      setDate(initialDate || toLocalDateString());
       setTime('');
     }
   }, [initialData, initialDate, isOpen]);
@@ -24,7 +42,27 @@ export const AddDailyTaskModal = ({ isOpen, onClose, onAddTask, onEditTask, init
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    setErrorMessage('');
+
+    if (!title.trim()) {
+      setErrorMessage('Nama kegiatan wajib diisi.');
+      return;
+    }
+
+    // Validation: Check time conflict on the same date
+    if (time.trim()) {
+      const conflict = existingTasks.find((task) => {
+        const isSameDate = (task.date || task.task_date) === date;
+        const isSameTime = task.time && task.time.trim() === time.trim();
+        const isDifferentId = initialData ? String(task.id) !== String(initialData.id) : true;
+        return isSameDate && isSameTime && isDifferentId;
+      });
+
+      if (conflict) {
+        setErrorMessage(`⚠️ Terdapat jadwal bentrok: "${conflict.title}" sudah dijadwalkan pada jam ${time} di tanggal yang sama.`);
+        return;
+      }
+    }
 
     if (initialData && onEditTask) {
       onEditTask(initialData.id, {
@@ -42,6 +80,7 @@ export const AddDailyTaskModal = ({ isOpen, onClose, onAddTask, onEditTask, init
 
     setTitle('');
     setTime('');
+    setErrorMessage('');
     onClose();
   };
 
@@ -70,6 +109,12 @@ export const AddDailyTaskModal = ({ isOpen, onClose, onAddTask, onEditTask, init
 
         {/* Body */}
         <div className="px-6 py-5 space-y-4">
+          {errorMessage && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium">
+              {errorMessage}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4" id="add-daily-task-form">
 
             {/* Title */}

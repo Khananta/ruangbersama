@@ -9,14 +9,14 @@ export const PartnerHabitCard = ({ habit, isCompleted, partnerName = 'Partner' }
 
   return (
     <div
-      className={`relative p-4 rounded-2xl border transition-all duration-200 font-sans ${
+      className={`relative p-4 rounded-2xl border transition-all duration-200 font-sans overflow-hidden ${
         isCompleted
           ? 'bg-sky-50/40 border-sky-200 shadow-sm'
           : 'bg-white border-stone-200 shadow-bento opacity-80'
       }`}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-2.5 min-w-0">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           {/* Icon */}
           <div
             className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-lg ${
@@ -31,14 +31,15 @@ export const PartnerHabitCard = ({ habit, isCompleted, partnerName = 'Partner' }
           </div>
 
           {/* Text */}
-          <div className="min-w-0">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-sky-600/80 block">
+          <div className="min-w-0 flex-1">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-sky-600/80 block truncate">
               {partnerName}
             </span>
             <h3
               className={`text-sm font-semibold truncate ${
                 isCompleted ? 'line-through text-stone-400' : 'text-stone-700'
               }`}
+              title={habit.title}
             >
               {habit.title}
             </h3>

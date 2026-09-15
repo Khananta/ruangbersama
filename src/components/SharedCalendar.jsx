@@ -1,13 +1,35 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Calendar as CalendarIcon, Plus, ChevronLeft, ChevronRight, Sparkles, Trash2, Clock, Edit3 } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, ChevronLeft, ChevronRight, Check, CheckCircle2, Trash2, Clock, Edit3 } from 'lucide-react';
 import { LOCAL_PROFILES } from '../lib/supabaseClient';
 import { ConfirmModal } from './ConfirmModal';
 
-export const SharedCalendar = ({ events, onOpenAddEvent, onEditEvent, profiles, currentUser, onDeleteEvent }) => {
-  // Always start with current real date
-  const todayStr = new Date().toISOString().split('T')[0];
+// Helper: Format Date object to local YYYY-MM-DD string safely without UTC offset shift
+const toLocalDateString = (d) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Helper: Parse YYYY-MM-DD string to local Date object
+const parseLocalDateString = (str) => {
+  if (!str) return new Date();
+  const [year, month, day] = str.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+export const SharedCalendar = ({
+  events = [],
+  onOpenAddEvent,
+  onEditEvent,
+  onToggleEvent,
+  profiles,
+  currentUser,
+  onDeleteEvent,
+}) => {
+  const todayStr = toLocalDateString(new Date());
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const [viewMode, setViewMode] = useState('selected'); // 'selected' or 'all'
@@ -28,8 +50,9 @@ export const SharedCalendar = ({ events, onOpenAddEvent, onEditEvent, profiles, 
   const handlePrevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const handleNextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
   const handleToday = () => {
-    setCurrentDate(new Date());
-    setSelectedDate(todayStr);
+    const now = new Date();
+    setCurrentDate(now);
+    setSelectedDate(toLocalDateString(now));
   };
 
   const eventsByDate = events.reduce((acc, evt) => {
@@ -72,7 +95,7 @@ export const SharedCalendar = ({ events, onOpenAddEvent, onEditEvent, profiles, 
 
   const allSorted = [...upcomingEvents, ...pastEvents];
 
-  const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+  const selectedDateObj = parseLocalDateString(selectedDate);
   const formattedSelectedDate = selectedDateObj.toLocaleDateString('id-ID', {
     weekday: 'long',
     day: 'numeric',
@@ -84,7 +107,7 @@ export const SharedCalendar = ({ events, onOpenAddEvent, onEditEvent, profiles, 
     <div className="w-full max-w-7xl mx-auto space-y-6 font-sans">
 
       {/* Header */}
-      <div className="p-6 rounded-3xl bg-white border border-stone-200 shadow-bento flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="p-6 rounded-3xl bg-white border border-stone-200 shadow-bento flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-11 h-11 rounded-2xl bg-sky-600 flex items-center justify-center text-white shrink-0 shadow-sm">
             <CalendarIcon className="w-5 h-5" />
@@ -97,9 +120,10 @@ export const SharedCalendar = ({ events, onOpenAddEvent, onEditEvent, profiles, 
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        {/* Legend & Add Button (Stacked vertically on mobile) */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
           {/* Legend */}
-          <div className="flex items-center gap-3 text-xs bg-stone-50 px-4 py-2.5 rounded-2xl border border-stone-200 shadow-sm">
+          <div className="flex items-center justify-center gap-3 text-xs bg-stone-50 px-4 py-2.5 rounded-2xl border border-stone-200 shadow-sm">
             <span className="flex items-center gap-1.5 font-semibold text-sky-600">
               <span className="w-2.5 h-2.5 rounded-full bg-sky-600 inline-block" />
               Bersama
@@ -113,10 +137,10 @@ export const SharedCalendar = ({ events, onOpenAddEvent, onEditEvent, profiles, 
 
           <button
             onClick={() => onOpenAddEvent(selectedDate >= todayStr ? selectedDate : todayStr)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-sm active:scale-[0.98] transition-all whitespace-nowrap"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-sm active:scale-[0.98] transition-all whitespace-nowrap w-full sm:w-auto"
           >
             <Plus className="w-4 h-4" />
-            Tambah Agenda
+            <span>Tambah Agenda</span>
           </button>
         </div>
       </div>
@@ -143,8 +167,8 @@ export const SharedCalendar = ({ events, onOpenAddEvent, onEditEvent, profiles, 
                 value={selectedDate}
                 onChange={(e) => {
                   if (e.target.value) {
-                    const [y, m, d] = e.target.value.split('-').map(Number);
-                    setCurrentDate(new Date(y, m - 1, d));
+                    const parsed = parseLocalDateString(e.target.value);
+                    setCurrentDate(parsed);
                     setSelectedDate(e.target.value);
                   }
                 }}
@@ -190,7 +214,7 @@ export const SharedCalendar = ({ events, onOpenAddEvent, onEditEvent, profiles, 
           <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
             {/* Blank cells for offset */}
             {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-              <div key={`blank-${i}`} className="h-16 rounded-2xl bg-stone-50/30" />
+              <div key={`blank-${i}`} className="h-14 sm:h-16 rounded-2xl bg-stone-50/30" />
             ))}
 
             {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -206,7 +230,7 @@ export const SharedCalendar = ({ events, onOpenAddEvent, onEditEvent, profiles, 
                   type="button"
                   key={dateStr}
                   onClick={() => setSelectedDate(dateStr)}
-                  className={`h-16 p-2 rounded-2xl border transition-all flex flex-col justify-between text-left cursor-pointer ${
+                  className={`h-14 sm:h-16 p-1.5 sm:p-2 rounded-2xl border transition-all flex flex-col justify-between text-left cursor-pointer ${
                     isSelected
                       ? 'ring-2 ring-sky-500 border-sky-500 bg-sky-50/70 shadow-md scale-[1.02] z-10'
                       : isToday
@@ -230,8 +254,9 @@ export const SharedCalendar = ({ events, onOpenAddEvent, onEditEvent, profiles, 
                     >
                       {dayNum}
                     </span>
+                    {/* Hide event count badge on mobile to keep cells clean and uncluttered */}
                     {dayEvents.length > 0 && (
-                      <span className={`text-[9px] font-bold px-1 rounded-md ${
+                      <span className={`hidden sm:inline-block text-[9px] font-bold px-1 rounded-md ${
                         isSelected ? 'bg-sky-600 text-white' : 'bg-sky-100 text-sky-800'
                       }`}>
                         {dayEvents.length}
@@ -239,12 +264,29 @@ export const SharedCalendar = ({ events, onOpenAddEvent, onEditEvent, profiles, 
                     )}
                   </div>
 
-                  <div className="space-y-0.5 overflow-hidden w-full">
+                  {/* Dot indicator on mobile when events exist */}
+                  {dayEvents.length > 0 && (
+                    <div className="flex sm:hidden items-center justify-center gap-0.5 mt-auto">
+                      {dayEvents.slice(0, 3).map((evt, dotIdx) => (
+                        <span
+                          key={dotIdx}
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            evt.category === 'together' ? 'bg-sky-500' : 'bg-stone-400'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Event pills on desktop */}
+                  <div className="hidden sm:block space-y-0.5 overflow-hidden w-full">
                     {dayEvents.slice(0, 2).map((evt) => (
                       <div
                         key={evt.id}
                         className={`text-[9px] font-semibold truncate px-1.5 py-0.5 rounded-lg ${
-                          evt.category === 'together'
+                          evt.is_completed
+                            ? 'line-through opacity-60 bg-stone-100 text-stone-400'
+                            : evt.category === 'together'
                             ? 'bg-sky-100/90 text-sky-800 border border-sky-200'
                             : 'bg-stone-100 text-stone-600 border border-stone-200'
                         }`}
@@ -344,7 +386,9 @@ export const SharedCalendar = ({ events, onOpenAddEvent, onEditEvent, profiles, 
                         <div
                           key={evt.id}
                           className={`p-3.5 rounded-2xl border transition-all ${
-                            isSelectedPast
+                            evt.is_completed
+                              ? 'bg-stone-50/70 border-stone-200 opacity-80'
+                              : isSelectedPast
                               ? 'bg-stone-50/70 border-stone-200 opacity-80'
                               : isTogether
                               ? 'bg-sky-50/60 border-sky-200'
@@ -367,36 +411,71 @@ export const SharedCalendar = ({ events, onOpenAddEvent, onEditEvent, profiles, 
                                   {evt.time}
                                 </span>
                               )}
+
+                              {evt.is_completed && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 border border-sky-200">
+                                  ✓ Terlaksana
+                                </span>
+                              )}
                             </div>
 
-                            {/* Edit & Delete buttons if NOT past and is author */}
-                            {canDelete && (
-                              <div className="flex items-center gap-1">
-                                {onEditEvent && (
-                                  <button
-                                    type="button"
-                                    onClick={() => onEditEvent(evt)}
-                                    className="text-stone-300 hover:text-sky-600 transition-colors p-0.5"
-                                    title="Edit agenda"
-                                  >
-                                    <Edit3 className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                                {onDeleteEvent && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setDeletingEvent(evt)}
-                                    className="text-stone-300 hover:text-red-500 transition-colors p-0.5"
-                                    title="Hapus agenda"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                            )}
+                            {/* Actions: Checkmark Toggle, Edit & Delete */}
+                            <div className="flex items-center gap-1.5">
+                              {/* Checkmark Toggle */}
+                              {onToggleEvent && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onToggleEvent(evt.id, !evt.is_completed);
+                                  }}
+                                  className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors shrink-0 ${
+                                    evt.is_completed
+                                      ? 'bg-sky-600 text-white shadow-sm'
+                                      : 'border border-stone-300 bg-white hover:border-sky-400 text-stone-400'
+                                  }`}
+                                  title={evt.is_completed ? 'Tandai belum terlaksana' : 'Tandai terlaksana'}
+                                >
+                                  {evt.is_completed ? (
+                                    <Check className="w-3.5 h-3.5 stroke-[3] text-white" />
+                                  ) : (
+                                    <Check className="w-3.5 h-3.5 stroke-[2] opacity-0 hover:opacity-50" />
+                                  )}
+                                </button>
+                              )}
+
+                              {canDelete && (
+                                <>
+                                  {onEditEvent && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onEditEvent(evt)}
+                                      className="text-stone-300 hover:text-sky-600 transition-colors p-1 rounded-lg hover:bg-sky-50"
+                                      title="Edit agenda"
+                                    >
+                                      <Edit3 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                  {onDeleteEvent && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setDeletingEvent(evt)}
+                                      className="text-stone-300 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50"
+                                      title="Hapus agenda"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                            </div>
                           </div>
 
-                          <h5 className="text-sm font-semibold text-stone-900 mt-2">{evt.title}</h5>
+                          <h5 className={`text-sm font-semibold mt-2 ${
+                            evt.is_completed ? 'line-through text-stone-400' : 'text-stone-900'
+                          }`}>
+                            {evt.title}
+                          </h5>
                           {evt.notes && (
                             <p className="text-[11px] text-stone-500 mt-1">{evt.notes}</p>
                           )}
@@ -433,10 +512,14 @@ export const SharedCalendar = ({ events, onOpenAddEvent, onEditEvent, profiles, 
                         key={evt.id}
                         onClick={() => {
                           setSelectedDate(evt.date);
+                          const parsed = parseLocalDateString(evt.date);
+                          setCurrentDate(parsed);
                           setViewMode('selected');
                         }}
                         className={`p-3.5 rounded-2xl border transition-all cursor-pointer hover:border-sky-300 ${
-                          isPastEvt
+                          evt.is_completed
+                            ? 'opacity-70 bg-stone-50 border-stone-200'
+                            : isPastEvt
                             ? 'opacity-60 bg-stone-50 border-stone-200'
                             : isTogether
                             ? 'bg-sky-50/60 border-sky-200'
@@ -459,15 +542,41 @@ export const SharedCalendar = ({ events, onOpenAddEvent, onEditEvent, profiles, 
                                 {evt.time}
                               </span>
                             )}
+
+                            {evt.is_completed && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 border border-sky-200">
+                                ✓ Terlaksana
+                              </span>
+                            )}
                           </div>
 
                           <div className="flex items-center gap-1.5">
                             <span className="text-[11px] font-bold text-stone-500">
-                              {new Date(evt.date + 'T00:00:00').toLocaleDateString('id-ID', {
+                              {parseLocalDateString(evt.date).toLocaleDateString('id-ID', {
                                 day: 'numeric',
                                 month: 'short',
                               })}
                             </span>
+
+                            {/* Checkmark Toggle */}
+                            {onToggleEvent && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onToggleEvent(evt.id, !evt.is_completed);
+                                }}
+                                className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors shrink-0 ${
+                                  evt.is_completed
+                                    ? 'bg-sky-600 text-white shadow-sm'
+                                    : 'border border-stone-300 bg-white hover:border-sky-400 text-stone-400'
+                                }`}
+                                title={evt.is_completed ? 'Tandai belum terlaksana' : 'Tandai terlaksana'}
+                              >
+                                {evt.is_completed && <Check className="w-3 h-3 stroke-[3] text-white" />}
+                              </button>
+                            )}
+
                             {canDelete && (
                               <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                 {onEditEvent && (
@@ -501,7 +610,11 @@ export const SharedCalendar = ({ events, onOpenAddEvent, onEditEvent, profiles, 
                           </div>
                         </div>
 
-                        <h5 className="text-sm font-semibold text-stone-900 mt-2">{evt.title}</h5>
+                        <h5 className={`text-sm font-semibold mt-2 ${
+                          evt.is_completed ? 'line-through text-stone-400' : 'text-stone-900'
+                        }`}>
+                          {evt.title}
+                        </h5>
                         {evt.notes && (
                           <p className="text-[11px] text-stone-500 mt-1">{evt.notes}</p>
                         )}

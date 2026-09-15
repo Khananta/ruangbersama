@@ -668,6 +668,22 @@ export const useSupabaseRealtime = (currentUser) => {
     }
   }, [updateState]);
 
+  const toggleAgendaEvent = useCallback(async (eventId, isCompleted) => {
+    updateState((prev) => ({
+      ...prev,
+      agenda_events: (prev.agenda_events || []).map((e) =>
+        String(e.id) === String(eventId) ? { ...e, is_completed: isCompleted } : e
+      ),
+    }));
+
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from('agenda_events').update({
+        is_completed: isCompleted,
+      }).eq('id', eventId);
+      if (error) console.error('Supabase toggle agenda_events error:', error.message);
+    }
+  }, [updateState]);
+
   const deleteAgendaEvent = useCallback(async (eventId) => {
     updateState((prev) => ({
       ...prev,
@@ -862,6 +878,7 @@ export const useSupabaseRealtime = (currentUser) => {
     deleteDailyTask,
     addAgendaEvent,
     editAgendaEvent,
+    toggleAgendaEvent,
     deleteAgendaEvent,
     saveWeeklyReflection,
     deleteWeeklyReflection,

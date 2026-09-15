@@ -3,23 +3,43 @@
 import React, { useState } from 'react';
 import { X, Plus, Heart, User, Clock } from 'lucide-react';
 
-export const AddEventModal = ({ isOpen, onClose, onAddEvent, onEditEvent, initialData = null, initialDate }) => {
+// Helper: Format Date object to local YYYY-MM-DD string
+const toLocalDateString = (d = new Date()) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export const AddEventModal = ({
+  isOpen,
+  onClose,
+  onAddEvent,
+  onEditEvent,
+  initialData = null,
+  initialDate,
+  existingEvents = [],
+  currentUser = null,
+  profiles = null,
+}) => {
   const [title, setTitle] = useState(initialData?.title || '');
-  const [date, setDate] = useState(initialData?.date || initialDate || new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(initialData?.date || initialDate || toLocalDateString());
   const [time, setTime] = useState(initialData?.time || '');
   const [category, setCategory] = useState(initialData?.category || 'together');
   const [notes, setNotes] = useState(initialData?.notes || '');
+  const [errorMessage, setErrorMessage] = useState('');
 
   React.useEffect(() => {
+    setErrorMessage('');
     if (initialData) {
       setTitle(initialData.title || '');
-      setDate(initialData.date || initialDate || new Date().toISOString().split('T')[0]);
+      setDate(initialData.date || initialDate || toLocalDateString());
       setTime(initialData.time || '');
       setCategory(initialData.category || 'together');
       setNotes(initialData.notes || '');
     } else {
       setTitle('');
-      setDate(initialDate || new Date().toISOString().split('T')[0]);
+      setDate(initialDate || toLocalDateString());
       setTime('');
       setCategory('together');
       setNotes('');
@@ -30,7 +50,44 @@ export const AddEventModal = ({ isOpen, onClose, onAddEvent, onEditEvent, initia
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    setErrorMessage('');
+
+    if (!title.trim()) {
+      setErrorMessage('Judul agenda wajib diisi.');
+      return;
+    }
+
+    // Validation: Check time conflict on the same date for the same user or together events
+    if (time.trim()) {
+      const userEmail = currentUser?.email?.toLowerCase() || '';
+      const myId = currentUser?.id || null;
+      const isKhanif = userEmail.includes('khanif');
+
+      const isMyOrSharedEvent = (evt) => {
+        // If the new event being created is 'together', it checks against all together and current user's personal events
+        // If an existing event is 'together', it's a shared event
+        if (evt.category === 'together' || category === 'together') return true;
+        const uid = String(evt.created_by || '');
+        return (myId && uid === String(myId)) ||
+               (profiles?.user1?.id && isKhanif && uid === String(profiles.user1.id)) ||
+               (profiles?.user2?.id && !isKhanif && uid === String(profiles.user2.id)) ||
+               (isKhanif && (uid.includes('khanif') || uid.startsWith('1111') || uid === 'e258766b-78f3-43e0-8901-0ae225c75cc3')) ||
+               (!isKhanif && (uid.includes('arum') || uid.startsWith('2222') || uid === 'afc77284-caab-413b-be18-38f14ca07fc2'));
+      };
+
+      const conflict = existingEvents.find((evt) => {
+        const isSameDate = evt.date === date;
+        const isSameTime = evt.time && evt.time.trim() === time.trim();
+        const isDifferentId = initialData ? String(evt.id) !== String(initialData.id) : true;
+        const isRelevant = isMyOrSharedEvent(evt);
+        return isSameDate && isSameTime && isDifferentId && isRelevant;
+      });
+
+      if (conflict) {
+        setErrorMessage(`⚠️ Terdapat jadwal bentrok: "${conflict.title}" sudah dijadwalkan pada jam ${time} di tanggal yang sama.`);
+        return;
+      }
+    }
 
     if (initialData && onEditEvent) {
       onEditEvent(initialData.id, {
@@ -53,6 +110,7 @@ export const AddEventModal = ({ isOpen, onClose, onAddEvent, onEditEvent, initia
     setTitle('');
     setTime('');
     setNotes('');
+    setErrorMessage('');
     onClose();
   };
 
@@ -80,6 +138,12 @@ export const AddEventModal = ({ isOpen, onClose, onAddEvent, onEditEvent, initia
 
         {/* Body */}
         <div className="px-6 py-5 space-y-4">
+          {errorMessage && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium">
+              {errorMessage}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4" id="add-event-form">
 
             {/* Title */}

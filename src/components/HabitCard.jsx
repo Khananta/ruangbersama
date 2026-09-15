@@ -10,7 +10,7 @@ export const HabitCard = ({ habit, isCompleted, onToggle, onDelete, onEdit, isTo
   return (
     <div
       onClick={() => isToday && onToggle(habit.id)}
-      className={`group relative p-4 rounded-2xl border transition-all duration-200 font-sans ${
+      className={`group relative p-4 rounded-2xl border transition-all duration-200 font-sans overflow-hidden ${
         isCompleted
           ? 'bg-sky-50/70 border-sky-200 shadow-sm'
           : isToday
@@ -18,8 +18,8 @@ export const HabitCard = ({ habit, isCompleted, onToggle, onDelete, onEdit, isTo
           : 'bg-white border-stone-200 shadow-bento opacity-75'
       }`}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center justify-between gap-3 min-w-0">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           {/* Icon */}
           <div
             className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all text-lg ${
@@ -32,7 +32,7 @@ export const HabitCard = ({ habit, isCompleted, onToggle, onDelete, onEdit, isTo
           </div>
 
           {/* Text */}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <span className="text-[10px] uppercase font-bold tracking-wider text-sky-600 block truncate">
               {habit.category || 'Habit Harian'}
             </span>
@@ -40,6 +40,7 @@ export const HabitCard = ({ habit, isCompleted, onToggle, onDelete, onEdit, isTo
               className={`text-sm font-semibold transition-all truncate ${
                 isCompleted ? 'line-through text-stone-400' : 'text-stone-800'
               }`}
+              title={habit.title}
             >
               {habit.title}
             </h3>

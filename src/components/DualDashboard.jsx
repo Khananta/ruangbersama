@@ -227,7 +227,7 @@ export const DualDashboard = ({
         {/* Top Header Action Button */}
         <button
           onClick={onOpenAddHabit}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-sm active:scale-[0.98] transition-all whitespace-nowrap self-stretch sm:self-auto justify-center"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-sm active:scale-[0.98] transition-all whitespace-nowrap w-full sm:w-auto justify-center"
         >
           <Plus className="w-4 h-4" />
           <span>Tambah Habit</span>

@@ -93,6 +93,7 @@ export default function Home() {
     deleteDailyTask,
     addAgendaEvent,
     editAgendaEvent,
+    toggleAgendaEvent,
     deleteAgendaEvent,
     saveWeeklyReflection,
     deleteWeeklyReflection,
@@ -180,6 +181,11 @@ export default function Home() {
     });
     return result;
   }, [editAgendaEvent]);
+
+  const handleToggleAgendaEvent = useCallback(async (eventId, isCompleted) => {
+    const result = await toggleAgendaEvent(eventId, isCompleted);
+    return result;
+  }, [toggleAgendaEvent]);
 
   const handleDeleteAgendaEvent = useCallback(async (eventId) => {
     const result = await deleteAgendaEvent(eventId);
@@ -369,6 +375,7 @@ export default function Home() {
               setEditingEvent(evt);
               setIsAddEventOpen(true);
             }}
+            onToggleEvent={handleToggleAgendaEvent}
             profiles={data.profiles}
             currentUser={currentUser}
             onDeleteEvent={handleDeleteAgendaEvent}
@@ -411,6 +418,9 @@ export default function Home() {
         onEditEvent={handleEditAgendaEvent}
         initialData={editingEvent}
         initialDate={selectedEventDate}
+        existingEvents={data.agenda_events}
+        currentUser={currentUser}
+        profiles={data.profiles}
       />
 
     </div>
