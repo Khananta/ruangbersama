@@ -133,6 +133,11 @@ export const DailyTasks = ({
 
   const isSelectedToday = selectedDate === todayStr;
 
+  // Calculate day difference for max 2 days editability (0 = today, 1 = yesterday, 2 = 2 days ago)
+  const today = parseLocalDateString(todayStr);
+  const diffDays = Math.round((today.getTime() - dateObj.getTime()) / (1000 * 3600 * 24));
+  const canToggleTasks = diffDays >= 0 && diffDays <= 2;
+
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 font-sans">
       
@@ -143,9 +148,16 @@ export const DailyTasks = ({
             <CheckSquare className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-stone-900">
-              {formattedDate}
-            </h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl font-bold text-stone-900">
+                {formattedDate}
+              </h2>
+              {!canToggleTasks && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
+                  🔒 Riwayat &gt;2 hari (Read-Only)
+                </span>
+              )}
+            </div>
             <p className="text-xs text-stone-400 mt-0.5">
               Catat to-do & daftar kegiatan harianmu dan lihat aktivitas pasanganmu secara realtime.
             </p>
@@ -285,25 +297,31 @@ export const DailyTasks = ({
               myTasks.map((task) => (
                 <div
                   key={task.id}
-                  onClick={() => onToggleTask(task.id, !task.is_completed)}
-                  className={`group p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 ${
+                  onClick={() => canToggleTasks && onToggleTask(task.id, !task.is_completed)}
+                  className={`group p-3.5 rounded-2xl border transition-all duration-200 flex items-center justify-between gap-3 ${
                     task.is_completed
                       ? 'bg-sky-50/60 border-sky-200'
-                      : 'bg-stone-50 border-stone-200 hover:border-sky-300 hover:bg-white'
+                      : canToggleTasks
+                      ? 'bg-stone-50 border-stone-200 hover:border-sky-300 hover:bg-white cursor-pointer'
+                      : 'bg-stone-50/70 border-stone-200 opacity-80 cursor-not-allowed'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <button
                       type="button"
+                      disabled={!canToggleTasks}
                       onClick={(e) => {
                         e.stopPropagation();
-                        onToggleTask(task.id, !task.is_completed);
+                        if (canToggleTasks) onToggleTask(task.id, !task.is_completed);
                       }}
                       className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors shrink-0 ${
                         task.is_completed
                           ? 'bg-sky-600 text-white shadow-sm'
-                          : 'border border-stone-300 bg-white hover:border-sky-400'
+                          : canToggleTasks
+                          ? 'border border-stone-300 bg-white hover:border-sky-400'
+                          : 'border border-stone-200 bg-stone-100 cursor-not-allowed'
                       }`}
+                      title={!canToggleTasks ? 'Riwayat >2 hari lalu terkunci' : 'Tandai selesai'}
                     >
                       {task.is_completed && <CheckCircle2 className="w-4 h-4 text-white" />}
                     </button>
@@ -323,30 +341,34 @@ export const DailyTasks = ({
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingTask(task);
-                        setIsAddModalOpen(true);
-                      }}
-                      className="text-stone-300 hover:text-sky-600 p-1.5 rounded-lg hover:bg-sky-50 transition-colors"
-                      title="Edit kegiatan"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                    </button>
+                    {canToggleTasks && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingTask(task);
+                            setIsAddModalOpen(true);
+                          }}
+                          className="text-stone-300 hover:text-sky-600 p-1.5 rounded-lg hover:bg-sky-50 transition-colors"
+                          title="Edit kegiatan"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
 
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeletingTask(task);
-                      }}
-                      className="text-stone-300 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                      title="Hapus kegiatan"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingTask(task);
+                          }}
+                          className="text-stone-300 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                          title="Hapus kegiatan"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))

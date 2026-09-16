@@ -120,6 +120,21 @@ CREATE TABLE IF NOT EXISTS public.daily_journals (
     CONSTRAINT unique_user_daily_journal UNIQUE (user_id, date)
 );
 
+-- 10. College Assignments Table (Tugas Kuliah)
+CREATE TABLE IF NOT EXISTS public.college_assignments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    couple_id UUID NOT NULL DEFAULT 'c1010000-0000-0000-0000-000000000101',
+    user_id UUID NOT NULL,
+    title TEXT NOT NULL,
+    course TEXT DEFAULT '',
+    due_date DATE NOT NULL DEFAULT current_date,
+    due_time TEXT DEFAULT '23:59',
+    is_completed BOOLEAN DEFAULT false,
+    notes TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- ============================================================
 -- ROW LEVEL SECURITY (RLS) & OPEN POLICIES
 -- ============================================================
@@ -132,6 +147,7 @@ ALTER TABLE public.daily_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.agenda_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.weekly_evaluations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_journals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.college_assignments ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "allow_all_profiles" ON public.profiles;
 DROP POLICY IF EXISTS "allow_all_habits" ON public.habits;
@@ -141,6 +157,7 @@ DROP POLICY IF EXISTS "allow_all_agenda_events" ON public.agenda_events;
 DROP POLICY IF EXISTS "allow_all_weekly_evaluations" ON public.weekly_evaluations;
 DROP POLICY IF EXISTS "allow_all_couples" ON public.couples;
 DROP POLICY IF EXISTS "allow_all_daily_journals" ON public.daily_journals;
+DROP POLICY IF EXISTS "allow_all_college_assignments" ON public.college_assignments;
 
 CREATE POLICY "allow_all_profiles" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all_habits" ON public.habits FOR ALL USING (true) WITH CHECK (true);
@@ -150,6 +167,7 @@ CREATE POLICY "allow_all_agenda_events" ON public.agenda_events FOR ALL USING (t
 CREATE POLICY "allow_all_weekly_evaluations" ON public.weekly_evaluations FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all_couples" ON public.couples FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all_daily_journals" ON public.daily_journals FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_college_assignments" ON public.college_assignments FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================================
 -- REALTIME PUBLICATION (SAFE CHECK PER TABLE)
@@ -187,5 +205,9 @@ BEGIN
 
     IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'daily_journals') THEN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.daily_journals;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'college_assignments') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.college_assignments;
     END IF;
 END $$;

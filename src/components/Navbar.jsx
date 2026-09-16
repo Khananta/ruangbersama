@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Leaf, Calendar, CheckSquare, ListTodo, Sparkles, LogOut, User } from 'lucide-react';
+import { Leaf, Calendar, CheckSquare, ListTodo, Sparkles, LogOut, User, BarChart3 } from 'lucide-react';
 import { LOCAL_PROFILES } from '../lib/supabaseClient';
 
 export const Navbar = ({ 
@@ -87,6 +87,18 @@ export const Navbar = ({
           >
             <Sparkles className={`w-3.5 h-3.5 ${activeTab === 'evaluation' ? 'text-sky-600' : ''}`} />
             <span>Refleksi</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'analytics'
+                ? 'bg-white text-sky-600 shadow-sm border border-sky-100 font-bold'
+                : 'text-stone-400 hover:text-stone-700'
+            }`}
+          >
+            <BarChart3 className={`w-3.5 h-3.5 ${activeTab === 'analytics' ? 'text-sky-600' : ''}`} />
+            <span>Analitik</span>
           </button>
         </nav>
 

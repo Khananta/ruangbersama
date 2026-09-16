@@ -52,4 +52,5 @@ export const getInitialState = () => ({
   agenda_events: [],
   weekly_evaluations: [],
   daily_journals: [],
+  college_assignments: [],
 });

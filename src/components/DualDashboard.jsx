@@ -3,6 +3,8 @@
 import React, { useState, useMemo } from 'react';
 import { HabitCard } from './HabitCard';
 import { PartnerHabitCard } from './PartnerHabitCard';
+import { CollegeAssignments } from './CollegeAssignments';
+import { DailyMessageModal } from './DailyMessageModal';
 import { Plus, Sparkles, Heart, CheckCircle2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Send, MessageSquareHeart, Edit3, Check } from 'lucide-react';
 import { LOCAL_PROFILES } from '../lib/supabaseClient';
 import { ConfirmModal } from './ConfirmModal';
@@ -63,12 +65,15 @@ export const DualDashboard = ({
   onDeleteHabit,
   saveDailyJournal,
   dailyJournals = [],
+  collegeAssignments = [],
+  onAddCollegeAssignment,
+  onEditCollegeAssignment,
+  onToggleCollegeAssignment,
+  onDeleteCollegeAssignment,
 }) => {
   const todayStr = toLocalDateString(new Date());
   const [selectedDateStr, setSelectedDateStr] = useState(todayStr);
-  const [journalText, setJournalText] = useState('');
-  const [isEditingJournal, setIsEditingJournal] = useState(false);
-  const [journalSaved, setJournalSaved] = useState(false);
+  const [isDailyMessageModalOpen, setIsDailyMessageModalOpen] = useState(false);
   const [deletingHabit, setDeletingHabit] = useState(null);
 
   const userEmail = currentUser?.email?.toLowerCase() || '';
@@ -183,27 +188,14 @@ export const DualDashboard = ({
     );
   }, [dailyJournals, selectedDateStr, effectiveMyId, myProfile?.id, isKhanif]);
 
-  const handleSendMessage = () => {
-    if (!journalText.trim()) return;
-    saveDailyJournal(journalText.trim(), selectedDateStr);
-    setJournalSaved(true);
-    setIsEditingJournal(false);
-    setJournalText('');
-    setTimeout(() => setJournalSaved(false), 2500);
-  };
-
-  const handleStartEdit = () => {
-    setJournalText(myDailyMessage?.content || '');
-    setIsEditingJournal(true);
-  };
-
-  const handleCancelEdit = () => {
-    setJournalText('');
-    setIsEditingJournal(false);
-  };
-
   const selectedDate = parseLocalDateString(selectedDateStr);
+  const today = parseLocalDateString(todayStr);
   const isSelectedToday = selectedDateStr === todayStr;
+
+  // Calculate day difference for max 2 days editability
+  // diffDays: 0 = Today, 1 = Yesterday, 2 = 2 days ago, >= 3 = older (locked), < 0 = future (locked)
+  const diffDays = Math.round((today.getTime() - selectedDate.getTime()) / (1000 * 3600 * 24));
+  const canToggleHabit = diffDays >= 0 && diffDays <= 2;
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 font-sans">
@@ -299,9 +291,16 @@ export const DualDashboard = ({
                 <h3 className="font-bold text-stone-900 text-base sm:text-lg leading-tight">
                   Daftar Habit Harian
                 </h3>
-                <span className="text-xs font-semibold text-stone-400">
-                  {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
-                </span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs font-semibold text-stone-400">
+                    {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+                  </span>
+                  {!canToggleHabit && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
+                      🔒 Riwayat &gt;2 hari (Read-Only)
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Navigation Controls: Date Picker + Prev/Next + Hari Ini Button */}
@@ -400,6 +399,7 @@ export const DualDashboard = ({
                         onToggle={(id) => onToggleHabit(id, myId, selectedDateStr)}
                         onEdit={(h) => onOpenEditHabit && onOpenEditHabit(h)}
                         onDelete={(h) => setDeletingHabit(h)}
+                        canToggle={canToggleHabit}
                         isToday={isSelectedToday}
                       />
                     ))}
@@ -504,188 +504,116 @@ export const DualDashboard = ({
 
         </div>
 
-        {/* ── SIDEBAR (4 cols): Daily Growth Notes & Consistency ── */}
+        {/* ── SIDEBAR (4 cols): Pesan Pasangan, Tugas Kuliah, & Konsistensi ── */}
         <div className="lg:col-span-4 space-y-6">
 
-          {/* Daily Note & Cheer Card (Pesan Singkat Harian Pasangan) */}
+          {/* 1. Daily Note (Pesan Singkat Harian Pasangan & Action Modal) */}
           <div className="p-6 rounded-3xl bg-white border border-stone-200 shadow-bento space-y-4">
             <div className="flex items-center justify-between border-b border-stone-100 pb-3">
               <div>
                 <h3 className="font-bold text-stone-900 text-base flex items-center gap-1.5">
                   <MessageSquareHeart className="w-4 h-4 text-sky-600" />
-                  Pesan Singkat Harian
+                  Pesan dari Pasangan
                 </h3>
-                <p className="text-[11px] text-stone-400 mt-0.5">Saling kirim pesan • Reset setiap hari</p>
+                <p className="text-[11px] text-stone-400 mt-0.5">Catatan manis harian berdua</p>
               </div>
               <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${isSelectedToday ? 'bg-sky-100 text-sky-700' : 'bg-stone-100 text-stone-600'}`}>
                 {isSelectedToday ? 'Hari Ini' : `${selectedDate.getDate()} ${monthNames[selectedDate.getMonth()].slice(0, 3)}`}
               </span>
             </div>
 
-            {/* 1. Pesan dari Pasangan */}
-            <div className="space-y-1.5">
+            {/* Tampilan Utama: Pesan dari Pasangan */}
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
                   <span>💌</span> Dari {partnerProfile?.name || 'Pasangan'}
                 </span>
                 {partnerDailyMessage && (
                   <span className="text-[10px] text-sky-600 font-semibold flex items-center gap-1">
-                    <Heart className="w-3 h-3 fill-sky-500 text-sky-500 inline" /> Terkirim
+                    <Heart className="w-3 h-3 fill-sky-500 text-sky-500 inline" /> Ada pesan baru
                   </span>
                 )}
               </div>
 
               {partnerDailyMessage?.content ? (
-                <div className="p-3.5 rounded-2xl bg-sky-50/70 border border-sky-100 shadow-sm relative">
-                  <p className="text-xs text-stone-800 leading-relaxed font-medium italic">
+                <div className="p-4 rounded-2xl bg-sky-50/70 border border-sky-100 shadow-sm relative space-y-1">
+                  <p className="text-xs text-stone-800 leading-relaxed font-medium italic whitespace-pre-wrap">
                     "{partnerDailyMessage.content}"
                   </p>
+                  <p className="text-[10px] text-sky-700/70 text-right font-medium">
+                    ~ {partnerProfile?.name}
+                  </p>
                 </div>
               ) : (
-                <div className="p-3.5 rounded-2xl bg-stone-50/80 border border-dashed border-stone-200 text-center">
-                  <p className="text-[11px] text-stone-400">
-                    Belum ada pesan dari {partnerProfile?.name || 'pasangan'} untuk tanggal ini ✨
+                <div className="p-4 rounded-2xl bg-stone-50/80 border border-dashed border-stone-200 text-center space-y-1">
+                  <p className="text-lg">💌</p>
+                  <p className="text-[11px] text-stone-500 font-medium">
+                    Belum ada pesan dari {partnerProfile?.name || 'pasangan'} untuk tanggal ini
+                  </p>
+                  <p className="text-[10px] text-stone-400">
+                    Pesan yang dikirim {partnerProfile?.name} akan otomatis muncul di sini.
                   </p>
                 </div>
               )}
             </div>
 
-            {/* 2. Pesan dari Kamu */}
-            <div className="space-y-2 pt-2 border-t border-stone-100">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
-                  <span>✨</span> Dari Kamu ({myProfile?.name || 'Kamu'})
-                </span>
-                {myDailyMessage && !isEditingJournal && (
-                  <button
-                    onClick={handleStartEdit}
-                    className="text-[11px] text-sky-600 hover:text-sky-700 font-bold flex items-center gap-1 transition-colors"
-                  >
-                    <Edit3 className="w-3 h-3" /> Ubah
-                  </button>
-                )}
-              </div>
-
-              {myDailyMessage?.content && !isEditingJournal ? (
-                <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200 space-y-1.5">
-                  <p className="text-xs text-stone-800 leading-relaxed font-medium">
-                    "{myDailyMessage.content}"
-                  </p>
-                  <p className="text-[10px] text-stone-400 text-right">
-                    ✓ Tersimpan untuk {isSelectedToday ? 'hari ini' : selectedDateStr}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {/* Quick Cheer Chips */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {QUICK_CHEERS.map((chip, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setJournalText(chip)}
-                        className="text-[10px] px-2 py-1 rounded-lg bg-sky-50/80 hover:bg-sky-100 text-sky-800 border border-sky-100 transition-colors text-left font-medium"
-                      >
-                        {chip}
-                      </button>
-                    ))}
-                  </div>
-
-                  <textarea
-                    value={journalText}
-                    onChange={(e) => setJournalText(e.target.value)}
-                    placeholder={`Tulis pesan manis / semangat untuk ${partnerProfile?.name || 'pasanganmu'} hari ini...`}
-                    rows={3}
-                    maxLength={300}
-                    className="w-full p-3 rounded-2xl bg-stone-50 border border-stone-200 text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition-all resize-none font-sans"
-                  />
-
-                  <div className="flex items-center gap-2">
-                    {isEditingJournal && (
-                      <button
-                        type="button"
-                        onClick={handleCancelEdit}
-                        className="py-2 px-3 rounded-xl text-xs font-bold text-stone-500 bg-stone-100 hover:bg-stone-200 transition-colors"
-                      >
-                        Batal
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleSendMessage}
-                      disabled={!journalText.trim()}
-                      className={`flex-1 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                        journalSaved
-                          ? 'bg-sky-100 text-sky-800 border border-sky-300'
-                          : !journalText.trim()
-                          ? 'bg-stone-100 text-stone-400 cursor-not-allowed'
-                          : 'bg-sky-600 hover:bg-sky-700 text-white shadow-sm'
-                      }`}
-                    >
-                      {journalSaved ? (
-                        <>
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Pesan Terkirim!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-3.5 h-3.5" />
-                          <span>{isEditingJournal ? 'Simpan Perubahan' : 'Kirim Pesan'}</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <p className="text-[10px] text-stone-400 text-center pt-1">
-              🔄 Pesan berganti otomatis setiap hari baru untuk menyambut hari yang segar
-            </p>
-          </div>
-
-          {/* Weekly Consistency Chart */}
-          <div className="p-6 rounded-3xl bg-white border border-stone-200 shadow-bento space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-stone-900 text-sm">Konsistensi 7 Hari</h3>
-                <p className="text-[11px] text-stone-400">Rekap penyelesaian habit</p>
-              </div>
-              <div className="flex items-center gap-1 text-[10px] font-semibold text-stone-500">
-                <span className="w-2 h-2 rounded-full bg-sky-600 inline-block" /> Selesai
-              </div>
-            </div>
-
-            <div className="flex items-end gap-1.5 h-20 pt-2">
-              {dateStrip.map((item) => {
-                const dayMyCompleted = (habitLogs || []).filter(
-                  (l) => isMyLog(l) && l.completed_at === item.dateStr
-                ).length;
-                const ratio = myHabits.length > 0 ? dayMyCompleted / myHabits.length : 0;
-                const heightPx = Math.max(6, Math.round(ratio * 60));
-
-                return (
-                  <div key={item.dateStr} className="flex-1 flex flex-col items-center gap-1">
-                    <div className="w-full rounded-xl overflow-hidden bg-stone-100 relative" style={{ height: '60px' }}>
-                      <div
-                        className={`absolute bottom-0 w-full rounded-xl transition-all duration-500 ${
-                          item.isSelected ? 'bg-sky-600' : 'bg-sky-300'
-                        }`}
-                        style={{ height: `${heightPx}px` }}
-                      />
-                    </div>
-                    <span className={`text-[8px] font-bold uppercase ${item.isToday ? 'text-sky-600' : 'text-stone-400'}`}>
-                      {item.day}
+            {/* Action Bar: Tulis / Ubah Pesan Kamu via Modal */}
+            <div className="pt-2 border-t border-stone-100">
+              {myDailyMessage?.content ? (
+                <div className="p-3 rounded-2xl bg-stone-50 border border-stone-200 flex items-center justify-between gap-2.5">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] text-stone-500 font-semibold block truncate">
+                      Pesanmu untuk {partnerProfile?.name}:
                     </span>
+                    <p className="text-xs text-stone-800 italic truncate mt-0.5">
+                      "{myDailyMessage.content}"
+                    </p>
                   </div>
-                );
-              })}
+                  <button
+                    onClick={() => setIsDailyMessageModalOpen(true)}
+                    className="px-3 py-1.5 rounded-xl bg-white border border-stone-200 hover:border-sky-300 text-xs font-bold text-sky-700 shadow-sm shrink-0 flex items-center gap-1 transition-all active:scale-95"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Ubah</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsDailyMessageModalOpen(true)}
+                  className="w-full py-2.5 px-4 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Tulis Pesan untuk {partnerProfile?.name || 'Pasangan'}</span>
+                </button>
+              )}
             </div>
           </div>
 
+          {/* 2. List Tugas Kuliah (Simple Assignment Tracker) */}
+          <CollegeAssignments
+            assignments={collegeAssignments}
+            onAddAssignment={onAddCollegeAssignment}
+            onEditAssignment={onEditCollegeAssignment}
+            onToggleAssignment={onToggleCollegeAssignment}
+            onDeleteAssignment={onDeleteCollegeAssignment}
+            currentUser={currentUser}
+            profiles={profiles}
+          />
         </div>
 
       </div>
+
+      {/* Daily Message Modal */}
+      <DailyMessageModal
+        isOpen={isDailyMessageModalOpen}
+        onClose={() => setIsDailyMessageModalOpen(false)}
+        onSave={saveDailyJournal}
+        initialContent={myDailyMessage?.content || ''}
+        partnerName={partnerProfile?.name || 'Pasangan'}
+        selectedDateStr={selectedDateStr}
+        isToday={isSelectedToday}
+      />
 
       {/* Confirmation Modal for deleting habit */}
       <ConfirmModal

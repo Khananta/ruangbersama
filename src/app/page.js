@@ -6,6 +6,7 @@ import { DualDashboard } from '../components/DualDashboard';
 import { DailyTasks } from '../components/DailyTasks';
 import { SharedCalendar } from '../components/SharedCalendar';
 import { WeeklyEvaluation } from '../components/WeeklyEvaluation';
+import { AnalyticsView } from '../components/AnalyticsView';
 import { AddHabitModal } from '../components/AddHabitModal';
 import { AddEventModal } from '../components/AddEventModal';
 import { LoginPage } from '../components/LoginPage';
@@ -45,7 +46,7 @@ export default function Home() {
       try {
         // Restore active tab
         const savedTab = localStorage.getItem(ACTIVE_TAB_KEY);
-        if (savedTab && ['dashboard', 'tasks', 'calendar', 'evaluation'].includes(savedTab)) {
+        if (savedTab && ['dashboard', 'tasks', 'calendar', 'evaluation', 'analytics'].includes(savedTab)) {
           setActiveTabState(savedTab);
         }
 
@@ -98,6 +99,10 @@ export default function Home() {
     saveWeeklyReflection,
     deleteWeeklyReflection,
     saveDailyJournal,
+    addCollegeAssignment,
+    editCollegeAssignment,
+    toggleCollegeAssignment,
+    deleteCollegeAssignment,
     clearUserState,
   } = useSupabaseRealtime(currentUser);
 
@@ -227,6 +232,36 @@ export default function Home() {
     return result;
   }, [saveDailyJournal]);
 
+  const handleAddCollegeAssignment = useCallback(async (assignmentData) => {
+    const result = await addCollegeAssignment(assignmentData);
+    setToast({
+      type: 'success',
+      title: 'Tugas Ditambahkan! 🎓',
+      message: `Tugas "${assignmentData.title}" berhasil dicatat.`,
+    });
+    return result;
+  }, [addCollegeAssignment]);
+
+  const handleEditCollegeAssignment = useCallback(async (assignmentId, updatedData) => {
+    const result = await editCollegeAssignment(assignmentId, updatedData);
+    setToast({
+      type: 'success',
+      title: 'Tugas Diperbarui! 🎓',
+      message: `Perubahan tugas "${updatedData.title}" berhasil disimpan.`,
+    });
+    return result;
+  }, [editCollegeAssignment]);
+
+  const handleDeleteCollegeAssignment = useCallback(async (assignmentId) => {
+    const result = await deleteCollegeAssignment(assignmentId);
+    setToast({
+      type: 'success',
+      title: 'Tugas Dihapus 🗑️',
+      message: 'Tugas kuliah berhasil dihapus dari daftar.',
+    });
+    return result;
+  }, [deleteCollegeAssignment]);
+
   const handleLoginSuccess = useCallback((user) => {
     setCurrentUser(user);
     if (typeof window !== 'undefined') {
@@ -346,6 +381,11 @@ export default function Home() {
             onDeleteHabit={handleDeleteHabit}
             saveDailyJournal={handleSaveDailyJournal}
             dailyJournals={data.daily_journals}
+            collegeAssignments={data.college_assignments}
+            onAddCollegeAssignment={handleAddCollegeAssignment}
+            onEditCollegeAssignment={handleEditCollegeAssignment}
+            onToggleCollegeAssignment={toggleCollegeAssignment}
+            onDeleteCollegeAssignment={handleDeleteCollegeAssignment}
           />
         )}
 
@@ -392,6 +432,18 @@ export default function Home() {
             currentUser={currentUser}
             habits={data.habits}
             habitLogs={data.habit_logs}
+          />
+        )}
+
+        {/* 5. Analitik Tab */}
+        {activeTab === 'analytics' && (
+          <AnalyticsView
+            habits={data.habits}
+            habitLogs={data.habit_logs}
+            dailyTasks={data.daily_tasks}
+            collegeAssignments={data.college_assignments}
+            currentUser={currentUser}
+            profiles={data.profiles}
           />
         )}
       </main>

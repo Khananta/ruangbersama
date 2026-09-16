@@ -191,6 +191,13 @@ export const useSupabaseRealtime = (currentUser) => {
         .limit(30);
       if (journalErr) console.warn('Supabase daily_journals query:', journalErr.message);
 
+      // 8. College assignments
+      const { data: assignmentsData, error: assignmentsErr } = await supabase
+        .from('college_assignments')
+        .select('*')
+        .order('due_date', { ascending: true });
+      if (assignmentsErr) console.warn('Supabase college_assignments query:', assignmentsErr.message);
+
       // Direct state update from database query
       updateState((prev) => {
         const profiles = buildProfilesShape(profileData || []);
@@ -203,6 +210,7 @@ export const useSupabaseRealtime = (currentUser) => {
           agenda_events: agendaData || [],
           weekly_evaluations: (evalData || []).map(parseEvalItem),
           daily_journals: journalData || [],
+          college_assignments: assignmentsData || [],
         };
       });
 
@@ -329,6 +337,24 @@ export const useSupabaseRealtime = (currentUser) => {
             }
             return { ...prev, daily_journals: [payload.new, ...(prev.daily_journals || [])] };
           });
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'college_assignments' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          updateState((prev) => ({
+            ...prev,
+            college_assignments: [...(prev.college_assignments || []).filter((a) => String(a.id) !== String(payload.new.id)), payload.new],
+          }));
+        } else if (payload.eventType === 'UPDATE') {
+          updateState((prev) => ({
+            ...prev,
+            college_assignments: (prev.college_assignments || []).map((a) => String(a.id) === String(payload.new.id) ? payload.new : a),
+          }));
+        } else if (payload.eventType === 'DELETE') {
+          updateState((prev) => ({
+            ...prev,
+            college_assignments: (prev.college_assignments || []).filter((a) => String(a.id) !== String(payload.old.id)),
+          }));
         }
       })
       .subscribe((status) => {
@@ -858,6 +884,118 @@ export const useSupabaseRealtime = (currentUser) => {
     }
   }, [effectiveUserId, userId, userEmail, currentUser?.id, updateState]);
 
+  // ─── Actions: College Assignments (Tugas Kuliah) ──────────
+
+  const addCollegeAssignment = useCallback(async (assignmentData) => {
+    if (isSupabaseConfigured && supabase) {
+      if (effectiveUserId && isUuid(effectiveUserId)) {
+        const pEmail = userEmail || (String(effectiveUserId).startsWith('1111') ? 'khanif@gmail.com' : 'arum@gmail.com');
+        const pName = currentUser?.user_metadata?.name || (pEmail.includes('khanif') ? 'Khanif' : 'Arum');
+        await supabase.from('profiles').upsert({
+          id: effectiveUserId,
+          couple_id: DEFAULT_COUPLE_ID,
+          email: pEmail,
+          name: pName,
+          role: 'partner',
+        });
+      }
+
+      const { data: insData, error } = await supabase.from('college_assignments').insert({
+        user_id: effectiveUserId,
+        couple_id: DEFAULT_COUPLE_ID,
+        title: assignmentData.title,
+        course: assignmentData.course || '',
+        due_date: assignmentData.due_date || new Date().toISOString().split('T')[0],
+        due_time: assignmentData.due_time || '23:59',
+        is_completed: false,
+        notes: assignmentData.notes || '',
+      }).select();
+
+      if (error) {
+        console.error('Supabase insert college_assignments error:', error.message);
+      } else if (insData && insData[0]) {
+        updateState((prev) => {
+          const exists = (prev.college_assignments || []).some((a) => String(a.id) === String(insData[0].id));
+          if (exists) return prev;
+          return {
+            ...prev,
+            college_assignments: [...(prev.college_assignments || []), insData[0]],
+          };
+        });
+        return;
+      }
+    }
+
+    // Local fallback
+    const tempId = `ca-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const assignmentObj = {
+      id: tempId,
+      user_id: effectiveUserId,
+      couple_id: DEFAULT_COUPLE_ID,
+      title: assignmentData.title,
+      course: assignmentData.course || '',
+      due_date: assignmentData.due_date || new Date().toISOString().split('T')[0],
+      due_time: assignmentData.due_time || '23:59',
+      is_completed: false,
+      notes: assignmentData.notes || '',
+      created_at: new Date().toISOString(),
+    };
+    updateState((prev) => ({
+      ...prev,
+      college_assignments: [...(prev.college_assignments || []), assignmentObj],
+    }));
+  }, [effectiveUserId, userEmail, currentUser?.user_metadata?.name, updateState]);
+
+  const editCollegeAssignment = useCallback(async (assignmentId, updatedData) => {
+    updateState((prev) => ({
+      ...prev,
+      college_assignments: (prev.college_assignments || []).map((a) =>
+        String(a.id) === String(assignmentId) ? { ...a, ...updatedData } : a
+      ),
+    }));
+
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from('college_assignments').update({
+        title: updatedData.title,
+        course: updatedData.course || '',
+        due_date: updatedData.due_date,
+        due_time: updatedData.due_time || '23:59',
+        notes: updatedData.notes || '',
+        updated_at: new Date().toISOString(),
+      }).eq('id', assignmentId);
+      if (error) console.error('Supabase update college_assignments error:', error.message);
+    }
+  }, [updateState]);
+
+  const toggleCollegeAssignment = useCallback(async (assignmentId, isCompleted) => {
+    updateState((prev) => ({
+      ...prev,
+      college_assignments: (prev.college_assignments || []).map((a) =>
+        String(a.id) === String(assignmentId) ? { ...a, is_completed: isCompleted } : a
+      ),
+    }));
+
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from('college_assignments').update({
+        is_completed: isCompleted,
+        updated_at: new Date().toISOString(),
+      }).eq('id', assignmentId);
+      if (error) console.error('Supabase toggle college_assignments error:', error.message);
+    }
+  }, [updateState]);
+
+  const deleteCollegeAssignment = useCallback(async (assignmentId) => {
+    updateState((prev) => ({
+      ...prev,
+      college_assignments: (prev.college_assignments || []).filter((a) => String(a.id) !== String(assignmentId)),
+    }));
+
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from('college_assignments').delete().eq('id', assignmentId);
+      if (error) console.error('Supabase delete college_assignments error:', error.message);
+    }
+  }, [updateState]);
+
   // Clear state when user logs out
   const clearUserState = useCallback(() => {
     setData(getInitialState());
@@ -883,6 +1021,10 @@ export const useSupabaseRealtime = (currentUser) => {
     saveWeeklyReflection,
     deleteWeeklyReflection,
     saveDailyJournal,
+    addCollegeAssignment,
+    editCollegeAssignment,
+    toggleCollegeAssignment,
+    deleteCollegeAssignment,
     clearUserState,
     loadFromSupabase,
   };
