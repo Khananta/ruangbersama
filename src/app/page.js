@@ -351,7 +351,7 @@ export default function Home() {
         onLogout={handleLogout}
       />
 
-      <main className="flex-1 px-4 sm:px-8 py-6 max-w-7xl w-full mx-auto pb-16">
+      <main className="flex-1 px-4 sm:px-8 max-w-7xl w-full mx-auto pb-16 pt-[140px] md:pt-[82px]">
 
         {/* Non-blocking sync indicator */}
         {isLoading && (

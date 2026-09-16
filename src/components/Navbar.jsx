@@ -18,7 +18,7 @@ export const Navbar = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full px-4 sm:px-8 py-3.5 bg-white/95 backdrop-blur-md border-b border-stone-200/80 font-sans">
+    <header className="fixed top-0 left-0 right-0 z-50 w-full px-4 sm:px-8 py-3 bg-white/95 backdrop-blur-md border-b border-stone-200/80 font-sans shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
 
         {/* Left: Brand */}
