@@ -252,6 +252,24 @@ export default function Home() {
     return result;
   }, [editCollegeAssignment]);
 
+  const handleToggleCollegeAssignment = useCallback(async (assignmentId, isCompleted) => {
+    const result = await toggleCollegeAssignment(assignmentId, isCompleted);
+    if (isCompleted) {
+      setToast({
+        type: 'success',
+        title: 'Tugas Selesai! 🎉🎓',
+        message: 'Keren banget! Satu beban tugas kuliah berhasil kamu selesaikan.',
+      });
+    } else {
+      setToast({
+        type: 'info',
+        title: 'Tugas Diaktifkan Kembali 📋',
+        message: 'Tugas dikembalikan ke daftar tugas aktif.',
+      });
+    }
+    return result;
+  }, [toggleCollegeAssignment]);
+
   const handleDeleteCollegeAssignment = useCallback(async (assignmentId) => {
     const result = await deleteCollegeAssignment(assignmentId);
     setToast({
@@ -351,11 +369,11 @@ export default function Home() {
         onLogout={handleLogout}
       />
 
-      <main className="flex-1 px-4 sm:px-8 max-w-7xl w-full mx-auto pb-16 pt-[140px] md:pt-[82px]">
+      <main className="flex-1 px-4 sm:px-8 max-w-7xl w-full mx-auto pb-24 md:pb-16 pt-[88px] sm:pt-[96px] md:pt-[96px]">
 
         {/* Non-blocking sync indicator */}
         {isLoading && (
-          <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-md border border-sky-200 shadow-md rounded-full text-xs font-semibold text-sky-600 transition-all animate-pulse">
+          <div className="fixed bottom-20 md:bottom-5 right-4 md:right-5 z-50 flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-md border border-sky-200 shadow-md rounded-full text-xs font-semibold text-sky-600 transition-all animate-pulse">
             <div className="w-3.5 h-3.5 border-2 border-sky-300 border-t-sky-600 rounded-full animate-spin" />
             <span>Menyelaraskan data...</span>
           </div>
@@ -384,7 +402,7 @@ export default function Home() {
             collegeAssignments={data.college_assignments}
             onAddCollegeAssignment={handleAddCollegeAssignment}
             onEditCollegeAssignment={handleEditCollegeAssignment}
-            onToggleCollegeAssignment={toggleCollegeAssignment}
+            onToggleCollegeAssignment={handleToggleCollegeAssignment}
             onDeleteCollegeAssignment={handleDeleteCollegeAssignment}
           />
         )}

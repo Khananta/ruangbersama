@@ -900,8 +900,9 @@ export const useSupabaseRealtime = (currentUser) => {
         });
       }
 
+      const targetUserId = assignmentData.user_id || effectiveUserId;
       const { data: insData, error } = await supabase.from('college_assignments').insert({
-        user_id: effectiveUserId,
+        user_id: targetUserId,
         couple_id: DEFAULT_COUPLE_ID,
         title: assignmentData.title,
         course: assignmentData.course || '',
@@ -930,7 +931,7 @@ export const useSupabaseRealtime = (currentUser) => {
     const tempId = `ca-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const assignmentObj = {
       id: tempId,
-      user_id: effectiveUserId,
+      user_id: assignmentData.user_id || effectiveUserId,
       couple_id: DEFAULT_COUPLE_ID,
       title: assignmentData.title,
       course: assignmentData.course || '',
@@ -955,14 +956,19 @@ export const useSupabaseRealtime = (currentUser) => {
     }));
 
     if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase.from('college_assignments').update({
+      const updateFields = {
         title: updatedData.title,
         course: updatedData.course || '',
         due_date: updatedData.due_date,
         due_time: updatedData.due_time || '23:59',
         notes: updatedData.notes || '',
         updated_at: new Date().toISOString(),
-      }).eq('id', assignmentId);
+      };
+      if (updatedData.user_id) {
+        updateFields.user_id = updatedData.user_id;
+      }
+
+      const { error } = await supabase.from('college_assignments').update(updateFields).eq('id', assignmentId);
       if (error) console.error('Supabase update college_assignments error:', error.message);
     }
   }, [updateState]);
