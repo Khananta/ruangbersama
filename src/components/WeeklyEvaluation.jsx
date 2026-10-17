@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { Sparkles, Plus, Calendar, MessageSquare, Target, Heart, Edit3, Trash2, Filter } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Sparkles, Plus, Calendar, MessageSquare, Target, Heart, Edit3, Trash2, Filter, Gift } from 'lucide-react';
 import { AddReflectionModal } from './AddReflectionModal';
 import { LOCAL_PROFILES } from '../lib/supabaseClient';
 import { ConfirmModal } from './ConfirmModal';
+import { BirthdaySurpriseModal } from './BirthdaySurpriseModal';
 
 const MONTH_NAMES = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -35,6 +36,45 @@ export const WeeklyEvaluation = ({
   const [editingData, setEditingData] = useState(null);
   const [deletingEval, setDeletingEval] = useState(null);
 
+  // 🎂 State & Deteksi Ulang Tahun Arum (18 Oktober)
+  const [isBirthdayModalOpen, setIsBirthdayModalOpen] = useState(false);
+  const [hasCelebrated, setHasCelebrated] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('arum_birthday_celebrated_2026');
+      if (stored === 'true') {
+        setHasCelebrated(true);
+      }
+    } catch (e) {}
+  }, []);
+
+  // Helper fungsi untuk mengecek tanggal secara real-time saat tombol ditekan
+  const checkIsBirthdayMoment = () => {
+    const now = new Date();
+    // JavaScript: getMonth() 0-indexed (Jan=0, Okt=9) -> getMonth() + 1 === 10
+    // Cek apakah tanggal 18 atau 19 Oktober (agar tetap aman jika bergadang lewat tengah malam)
+    const isBirthdayDate = (now.getMonth() + 1 === 10 && (now.getDate() === 18 || now.getDate() === 19));
+    const isPreview = typeof window !== 'undefined' && (
+      window.location.search.includes('preview_birthday=true') ||
+      window.location.search.includes('test_ultah=true') ||
+      window.location.search.includes('birthday=true') ||
+      localStorage.getItem('preview_birthday') === 'true'
+    );
+    return isBirthdayDate || isPreview;
+  };
+
+  const [isBirthdayActive, setIsBirthdayActive] = useState(false);
+
+  // Interval otomatis setiap 10 detik agar tepat jam 00:00:00 langsung terdeteksi
+  useEffect(() => {
+    setIsBirthdayActive(checkIsBirthdayMoment());
+    const interval = setInterval(() => {
+      setIsBirthdayActive(checkIsBirthdayMoment());
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleOpenAdd = () => {
     setEditingData(null);
     setIsModalOpen(true);
@@ -43,6 +83,24 @@ export const WeeklyEvaluation = ({
   const handleOpenEdit = (evalItem) => {
     setEditingData(evalItem);
     setIsModalOpen(true);
+  };
+
+  // Wrapper Simpan Refleksi: Simpan data asli + picu kado ultah jika sudah jam 00:00 (18 Oktober)
+  const handleSaveReflectionWithSurprise = (reflectionData) => {
+    if (onSaveReflection) {
+      onSaveReflection(reflectionData);
+    }
+
+    // Pengecekan real-time langsung ke jam detik saat tombol diklik
+    if (checkIsBirthdayMoment() || isBirthdayActive) {
+      setHasCelebrated(true);
+      try {
+        localStorage.setItem('arum_birthday_celebrated_2026', 'true');
+      } catch (e) {}
+      setTimeout(() => {
+        setIsBirthdayModalOpen(true);
+      }, 400);
+    }
   };
 
   // Filter evaluations
@@ -79,14 +137,55 @@ export const WeeklyEvaluation = ({
           </div>
         </div>
 
-        <button
-          onClick={handleOpenAdd}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-sm active:scale-[0.98] transition-all whitespace-nowrap w-full sm:w-auto justify-center"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Tambah Refleksi</span>
-        </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Tombol Khusus Yunan / Testing Malam Ini */}
+          {isKhanif && (
+            <button
+              type="button"
+              onClick={() => setIsBirthdayModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs shadow-sm transition-all whitespace-nowrap active:scale-[0.98] justify-center flex-1 sm:flex-initial"
+              title="Khusus Yunan: Klik untuk uji coba / preview tampilan kado ultah ontiiii"
+            >
+              <Gift className="w-4 h-4 text-rose-500" />
+              <span>Preview Ultah ontiiii 🎁</span>
+            </button>
+          )}
+
+          <button
+            onClick={handleOpenAdd}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-sm active:scale-[0.98] transition-all whitespace-nowrap w-full sm:w-auto justify-center flex-1 sm:flex-initial"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tambah Refleksi</span>
+          </button>
+        </div>
       </div>
+
+      {/* ── Banner Spesial Ulang Tahun (Muncul setelah refleksi disimpan / sudah dirayakan) ── */}
+      {hasCelebrated && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-rose-500/10 via-pink-500/10 to-sky-500/10 border border-rose-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-500 flex items-center justify-center text-white shrink-0 shadow-sm text-lg">
+              🎂
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-rose-800">Spesial 18 Oktober: Ulang Tahun ke-21 ontiiii! 🎉</span>
+                <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-bold">Hari Bahagia</span>
+              </div>
+              <p className="text-xs text-stone-600 mt-0.5">
+                Buka kembali kado interaktif, galeri 10 foto kenangan berdua, dan surat cinta dari Yunan ❤️
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsBirthdayModalOpen(true)}
+            className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold shadow-sm whitespace-nowrap active:scale-95 transition-all w-full sm:w-auto text-center"
+          >
+            Buka Kado Spesial 🎁
+          </button>
+        </div>
+      )}
 
       {/* ── Filter Bar (Filter Bulan & Minggu) ── */}
       <div className="p-4 rounded-3xl bg-white border border-stone-200 shadow-bento flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -259,10 +358,16 @@ export const WeeklyEvaluation = ({
           setIsModalOpen(false);
           setEditingData(null);
         }}
-        onSaveReflection={onSaveReflection}
+        onSaveReflection={handleSaveReflectionWithSurprise}
         initialData={editingData}
         isUser1={isKhanif}
         userName={myProfile.name}
+      />
+
+      {/* ── Modal Kejutan Ulang Tahun ke-21 Arum 🎂✨ ── */}
+      <BirthdaySurpriseModal
+        isOpen={isBirthdayModalOpen}
+        onClose={() => setIsBirthdayModalOpen(false)}
       />
 
       {/* ── Confirmation Modal for Deleting Reflection ── */}
